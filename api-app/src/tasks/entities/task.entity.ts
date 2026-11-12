@@ -11,10 +11,10 @@ export enum TaskStatus {
 
 // Defines the properties that every task must follow.
 export interface Task {
-  id: number;
-  title: string;
-  description?: string;
-  status: TaskStatus;
-  dueDate?: Date;
-  createdAt: Date;
+  id: number; // Unique identifier for the task.
+  title: string; // Title of the task, describing what needs to be done.
+  description?: string; // Optional detailed description of the task.
+  status: TaskStatus; // Current status of the task, which can be 'TODO', 'IN_PROGRESS', or 'DONE'.
+  dueDate?: Date; // Optional due date for the task, indicating when it should be completed.
+  createdAt: Date; // Timestamp indicating when the task was created.
 }
