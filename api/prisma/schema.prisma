@@ -1,0 +1,21 @@
+
+ // Generates the Prisma Client used by the NestJS backend.
+generator client {
+  provider = "prisma-client-js"
+}
+
+ // Defines SQLite as the database provider.
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// Defines the structure of tasks stored in the database.
+model Task {
+  id          Int      @id @default(autoincrement())
+  title       String
+  description String?
+  status      String   @default("TODO")
+  dueDate     DateTime?
+  createdAt   DateTime @default(now())
+}

@@ -1,3 +1,4 @@
+
 {
   "compilerOptions": {
     "module": "nodenext",
@@ -19,5 +20,12 @@
     "strict": true,
     "strictPropertyInitialization": false,
     "types": ["vitest/globals", "node"]
-  }
+  },
+  "exclude": [
+    "node_modules",
+    "dist",
+    "test",
+    "vitest.config.ts",
+    "vitest.config.e2e.ts"
+  ]
 }

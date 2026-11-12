@@ -1,6 +1,6 @@
-//api-app/src/tasks/entities/task.entity.ts
+//api/src/tasks/entities/task.entity.ts
 
-// LLM: Defines the structure and allowed statuses of a task.
+// Defines the structure and allowed statuses of a task.
 
 // Represents all possible task statuses.
 export enum TaskStatus {

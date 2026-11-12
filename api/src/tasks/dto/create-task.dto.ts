@@ -1,6 +1,6 @@
-//api-app/src/tasks/dto/create-task.dto.ts
+//api/src/tasks/dto/create-task.dto.ts
 
-// LLM: Validates incoming data when creating a new task.
+// Validates incoming data when creating a new task.
 
 import {
   IsDateString,

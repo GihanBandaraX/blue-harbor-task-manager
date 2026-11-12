@@ -1,6 +1,6 @@
-//api-app/src/tasks/tasks.controller.ts
+//api/src/tasks/tasks.controller.ts
 
-// LLM: Handles HTTP requests for task management.
+// Handles HTTP requests for task management.
 
 import {
   Body,
@@ -21,25 +21,25 @@ import { TasksService } from './tasks.service.js';
 export class TasksController {
   constructor(private readonly tasksService: TasksService) {}
 
-  // LLM: Creates a new task using the provided request data.
+  // Creates a new task using the provided request data.
   @Post()
   create(@Body() createTaskDto: CreateTaskDto) {
     return this.tasksService.create(createTaskDto);
   }
 
-  // LLM: Returns all tasks stored in the system.
+  // Returns all tasks stored in the system.
   @Get()
   findAll() {
     return this.tasksService.findAll();
   }
 
-  // LLM: Returns a single task using its ID.
+  // Returns a single task using its ID.
   @Get(':id')
   findOne(@Param('id', ParseIntPipe) id: number) {
     return this.tasksService.findOne(id);
   }
 
-  // LLM: Updates an existing task using its ID and request data.
+  // Updates an existing task using its ID and request data.
   @Patch(':id')
   update(
     @Param('id', ParseIntPipe) id: number,
@@ -48,7 +48,7 @@ export class TasksController {
     return this.tasksService.update(id, updateTaskDto);
   }
 
-  // LLM: Deletes an existing task using its ID.
+  // Deletes an existing task using its ID.
   @Delete(':id')
   remove(@Param('id', ParseIntPipe) id: number) {
     return this.tasksService.remove(id);
