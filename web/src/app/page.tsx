@@ -1,38 +1,24 @@
+//web/src/app/page.tsx
 
-// LLM: Displays and manages tasks using the NestJS API.
+// Displays and manages tasks using the NestJS API.
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import {
-  AlertCircle,
-  CalendarClock,
-  CheckCircle2,
-  Clock3,
-  ListTodo,
-  Moon,
-  Pencil,
-  Plus,
-  Search,
-  Sun,
-  Trash2,
+  AlertCircle,CalendarClock,CheckCircle2,Clock3,ListTodo,Moon,Pencil,Plus,Search,Sun,Trash2,X,ArrowUpDown,
 } from 'lucide-react';
 import { toast, Toaster } from 'sonner';
 
-import DashboardSidebar from '@/components/dashboard-sidebar';
+import DashboardSidebar from '@/components/dashboard-sidebar'; // Dashboard sidebar and navigation menu
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
+  Card,CardContent,CardHeader,CardTitle,
 } from '@/components/ui/card';
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
+  Dialog,DialogContent,DialogHeader,DialogTitle,
 } from '@/components/ui/dialog';
 
 type TaskStatus = 'TODO' | 'IN_PROGRESS' | 'DONE';
@@ -79,6 +65,12 @@ function formatDueDate(value: string | null) {
   }).format(new Date(value));
 }
 
+// Checks if a task is overdue (due date is in the past and status is not DONE)
+function isOverdue(value: string | null, status: TaskStatus) {
+  if (!value || status === 'DONE') return false;
+  return new Date(value).getTime() < Date.now();
+}
+
 // Converts API errors into a readable message.
 async function getErrorMessage(response: Response) {
   try {
@@ -98,14 +90,18 @@ async function getErrorMessage(response: Response) {
   return `Request failed (${response.status})`;
 }
 
-export default function TasksPage() {
+function TasksContent() {
+  const searchParams = useSearchParams();
+  const requestedStatus = searchParams.get('status');
+
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeFilter, setActiveFilter] = useState<TaskFilter>('ALL');
+  const [activeFilter, setActiveFilter] = useState<TaskFilter>('ALL'); // Get All Tasks
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc'); // Sort the Tasks
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -115,7 +111,8 @@ export default function TasksPage() {
   const [status, setStatus] = useState<TaskStatus>('TODO');
   const [dueDate, setDueDate] = useState('');
 
-  const [isDark, setIsDark] = useState(false);
+  const [isDark, setIsDark] = useState(false); // Tracks whether the dark theme is active or not.
+  const [viewingTask, setViewingTask] = useState<Task | null>(null); // Stores the task currently being viewed in the modal dialog.
 
   // Loads the user's saved theme when the page opens.
   useEffect(() => {
@@ -126,7 +123,6 @@ export default function TasksPage() {
     document.documentElement.classList.toggle('dark', darkMode);
   }, []);
 
-  // Changes the theme and remembers the user's selection.
   const toggleTheme = () => {
     const nextTheme = !isDark;
 
@@ -135,7 +131,6 @@ export default function TasksPage() {
     localStorage.setItem('taskora-theme', nextTheme ? 'dark' : 'light');
   };
 
-  // Retrieves the actual task records from the backend.
   const fetchTasks = useCallback(async () => {
     try {
       setLoading(true);
@@ -165,11 +160,8 @@ export default function TasksPage() {
     void fetchTasks();
   }, [fetchTasks]);
 
-  // Reads the requested task filter from the URL.
+  // Updates active filter dynamically whenever the URL search params change (sidebar navigation)
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const requestedStatus = params.get('status');
-
     if (
       requestedStatus === 'IN_PROGRESS' ||
       requestedStatus === 'DONE' ||
@@ -179,9 +171,8 @@ export default function TasksPage() {
     } else {
       setActiveFilter('ALL');
     }
-  }, []);
+  }, [requestedStatus]);
 
-  // Calculates summary values from the real task records.
   const summary = useMemo(
     () => ({
       total: tasks.length,
@@ -194,11 +185,11 @@ export default function TasksPage() {
     [tasks],
   );
 
-  // Applies the selected status and search filters.
+  // Filter and Sort tasks properly
   const filteredTasks = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
 
-    return tasks.filter((task) => {
+    const filtered = tasks.filter((task) => {
       const matchesStatus =
         activeFilter === 'ALL' || task.status === activeFilter;
 
@@ -209,9 +200,19 @@ export default function TasksPage() {
 
       return matchesStatus && matchesSearch;
     });
-  }, [tasks, activeFilter, searchQuery]);
 
-  // Clears the form before opening it for a new task.
+    // Sort by due date
+    return filtered.sort((a, b) => {
+      if (!a.dueDate) return 1;
+      if (!b.dueDate) return -1;
+
+      const dateA = new Date(a.dueDate).getTime();
+      const dateB = new Date(b.dueDate).getTime();
+
+      return sortOrder === 'asc' ? dateA - dateB : dateB - dateA;
+    });
+  }, [tasks, activeFilter, searchQuery, sortOrder]);
+
   const openCreateDialog = () => {
     setEditingId(null);
     setTitle('');
@@ -221,7 +222,6 @@ export default function TasksPage() {
     setDialogOpen(true);
   };
 
-  // Loads the selected task into the form for editing.
   const openEditDialog = (task: Task) => {
     setEditingId(task.id);
     setTitle(task.title);
@@ -231,7 +231,6 @@ export default function TasksPage() {
     setDialogOpen(true);
   };
 
-  // Sends the create or update request to the backend.
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
@@ -280,7 +279,6 @@ export default function TasksPage() {
     }
   };
 
-  // Confirms deletion before asking the backend to remove a task.
   const handleDelete = async (id: number) => {
     const confirmed = window.confirm(
       'Are you sure you want to delete this task?',
@@ -321,6 +319,7 @@ export default function TasksPage() {
       <DashboardSidebar />
 
       <main className="min-w-0 flex-1">
+
         {/* Page header */}
         <header
           className={`sticky top-0 z-20 flex h-20 items-center justify-between border-b px-5 backdrop-blur-xl sm:px-8 ${
@@ -371,6 +370,7 @@ export default function TasksPage() {
         </header>
 
         <div className="mx-auto w-full max-w-7xl space-y-8 p-5 sm:p-8">
+
           {/* Summary cards */}
           <section>
             <div className="mb-4 flex items-center justify-between">
@@ -380,9 +380,6 @@ export default function TasksPage() {
                   A live summary of your saved tasks.
                 </p>
               </div>
-              <span className="rounded-full border border-blue-500/20 bg-blue-500/10 px-3 py-1 text-xs font-medium text-blue-600 dark:text-blue-300">
-                Live data
-              </span>
             </div>
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -456,59 +453,59 @@ export default function TasksPage() {
             </div>
           </section>
 
-          {/* Task list */}
+          {/* Task list section */}
           <section
             className={`overflow-hidden rounded-2xl border shadow-sm backdrop-blur-xl ${panelStyle}`}
           >
             <div className="flex flex-col gap-4 border-b border-slate-200/70 p-5 dark:border-white/10 sm:p-6">
               <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
                 <div>
-                  <h2 className="text-lg font-bold">Your Tasks</h2>
+                  <h2 className="text-lg font-bold">
+                    {activeFilter === 'ALL' && 'All Tasks'}
+                    {activeFilter === 'TODO' && 'To Do Tasks'}
+                    {activeFilter === 'IN_PROGRESS' && 'In Progress Tasks'}
+                    {activeFilter === 'DONE' && 'Completed Tasks'}
+                  </h2>
                   <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
                     Manage and track your tasks from one place.
                   </p>
                 </div>
 
+                {/* Search Bar with Clear Button */}
                 <div className="relative w-full sm:max-w-xs">
                   <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                   <Input
                     value={searchQuery}
                     onChange={(event) => setSearchQuery(event.target.value)}
                     placeholder="Search tasks..."
-                    className="h-10 rounded-xl border-slate-200 bg-slate-50/80 pl-9 dark:border-white/10 dark:bg-white/5"
+                    className="h-10 rounded-xl border-slate-200 bg-slate-50/80 pl-9 pr-9 dark:border-white/10 dark:bg-white/5"
                   />
+                  {searchQuery && (
+                    <button
+                      type="button"
+                      onClick={() => setSearchQuery('')}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                      aria-label="Clear search"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  )}
                 </div>
               </div>
 
-              {/* Filter navigation */}
-              <nav className="flex flex-wrap gap-2">
-                {[
-                  { label: 'All Tasks', value: 'ALL' as TaskFilter, href: '/tasks' },
-                  {
-                    label: 'In Progress',
-                    value: 'IN_PROGRESS' as TaskFilter,
-                    href: '/tasks?status=IN_PROGRESS',
-                  },
-                  {
-                    label: 'Completed',
-                    value: 'DONE' as TaskFilter,
-                    href: '/tasks?status=DONE',
-                  },
-                ].map((filter) => (
-                  <a
-                    key={filter.value}
-                    href={filter.href}
-                    onClick={() => setActiveFilter(filter.value)}
-                    className={`rounded-lg border px-3 py-2 text-xs font-semibold transition ${
-                      activeFilter === filter.value
-                        ? 'border-blue-500 bg-blue-600 text-white shadow-md shadow-blue-600/20'
-                        : 'border-slate-200 text-slate-500 hover:border-blue-300 hover:text-blue-600 dark:border-white/10 dark:text-slate-400 dark:hover:text-blue-300'
-                    }`}
-                  >
-                    {filter.label}
-                  </a>
-                ))}
-              </nav>
+              {/* Action Toolbar (Sort Button Only) */}
+              <div className="flex justify-end pt-1">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')}
+                  className="rounded-xl border-slate-200 dark:border-white/10 dark:bg-white/5 text-xs font-semibold h-9 gap-1.5"
+                >
+                  <ArrowUpDown className="h-3.5 w-3.5 text-slate-400" />
+                  Sort: Due Date ({sortOrder === 'asc' ? 'Earliest First' : 'Latest First'})
+                </Button>
+              </div>
             </div>
 
             {/* Loading state */}
@@ -544,7 +541,7 @@ export default function TasksPage() {
                 <div className="mb-4 rounded-2xl bg-blue-500/10 p-4 text-blue-500">
                   <ListTodo className="h-8 w-8" />
                 </div>
-                <h3 className="font-semibold">LLM: No tasks yet</h3>
+                <h3 className="font-semibold">No tasks yet</h3>
                 <p className="mt-1 max-w-sm text-sm text-slate-500">
                   {searchQuery || activeFilter !== 'ALL'
                     ? 'No tasks match your current search or filter.'
@@ -577,71 +574,87 @@ export default function TasksPage() {
                   </thead>
 
                   <tbody className="divide-y divide-slate-100 dark:divide-white/5">
-                    {filteredTasks.map((task) => (
-                      <tr
-                        key={task.id}
-                        className="transition-colors hover:bg-blue-500/[0.035]"
-                      >
-                        <td className="max-w-md px-6 py-4">
-                          <p className="font-semibold">{task.title}</p>
-                          <p className="mt-1 truncate text-xs text-slate-500 dark:text-slate-400">
-                            {task.description || 'No description provided'}
-                          </p>
-                          <p className="mt-1 text-[11px] text-slate-400">
-                            Task #{task.id}
-                          </p>
-                        </td>
+                    {filteredTasks.map((task) => {
+                      const overdue = isOverdue(task.dueDate, task.status);
 
-                        <td className="px-6 py-4">
-                          <Badge
-                            variant="outline"
-                            className={`rounded-full px-3 py-1 text-[11px] font-semibold ${statusStyles[task.status]}`}
+                      return (
+                        <tr
+                          key={task.id}
+                          className="transition-colors hover:bg-blue-500/[0.035]"
+                        >
+                          <td 
+                            className="max-w-md px-6 py-4 cursor-pointer group"
+                            onClick={() => setViewingTask(task)}
                           >
-                            {task.status.replace('_', ' ')}
-                          </Badge>
-                        </td>
+                            <div className="flex items-center gap-2">
+                              <p className="font-semibold group-hover:text-blue-600 transition-colors">{task.title}</p>
 
-                        <td className="px-6 py-4">
-                          <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
-                            <CalendarClock className="h-4 w-4 text-slate-400" />
-                            {formatDueDate(task.dueDate)}
-                          </div>
-                        </td>
+                              {/* Clean Task ID Badge */}
+                                <span className="inline-flex items-center rounded-md border border-slate-200 bg-slate-50 px-2 py-1 font-mono text-xs font-semibold tracking-wide text-slate-600 dark:border-white/10 dark:bg-white/5 dark:text-slate-300">
+                                  #{task.id}
+                                </span>
+                            </div>
+                            <p className="mt-1 truncate text-xs text-slate-500 dark:text-slate-400">
+                              {task.description || 'No description provided'}
+                            </p>
+                          </td>
 
-                        <td className="px-6 py-4">
-                          <div className="flex justify-end gap-2">
-                            <Button
-                              type="button"
+                          <td className="px-6 py-4">
+                            <Badge
                               variant="outline"
-                              size="sm"
-                              onClick={() => openEditDialog(task)}
-                              className="rounded-lg border-slate-200 dark:border-white/10 dark:bg-white/5"
+                              className={`rounded-full px-3 py-1 text-[11px] font-semibold ${statusStyles[task.status]}`}
                             >
-                              <Pencil className="mr-1.5 h-3.5 w-3.5" />
-                              Edit
-                            </Button>
+                              {task.status.replace('_', ' ')}
+                            </Badge>
+                          </td>
 
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              onClick={() => void handleDelete(task.id)}
-                              className="rounded-lg border-rose-200 text-rose-600 hover:bg-rose-50 hover:text-rose-700 dark:border-rose-400/20 dark:bg-rose-400/5 dark:text-rose-300 dark:hover:bg-rose-400/10"
-                            >
-                              <Trash2 className="mr-1.5 h-3.5 w-3.5" />
-                              Delete
-                            </Button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
+                          <td className="px-6 py-4">
+                            <div className={`flex items-center gap-2 text-sm ${overdue ? 'text-rose-600 font-semibold dark:text-rose-400' : 'text-slate-600 dark:text-slate-300'}`}>
+                              <CalendarClock className={`h-4 w-4 ${overdue ? 'text-rose-500' : 'text-slate-400'}`} />
+                              {formatDueDate(task.dueDate)}
+                              {overdue && (
+                                <span className="rounded bg-rose-100 px-1.5 py-0.5 text-[10px] font-bold text-rose-600 dark:bg-rose-900/30 dark:text-rose-300">
+                                  Overdue
+                                </span>
+                              )}
+                            </div>
+                          </td>
+
+                          <td className="px-6 py-4">
+                            <div className="flex justify-end gap-2">
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => openEditDialog(task)}
+                                className="rounded-lg border-slate-200 dark:border-white/10 dark:bg-white/5"
+                              >
+                                <Pencil className="mr-1.5 h-3.5 w-3.5" />
+                                Edit
+                              </Button>
+
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => void handleDelete(task.id)}
+                                className="rounded-lg border-rose-200 text-rose-600 hover:bg-rose-50 hover:text-rose-700 dark:border-rose-400/20 dark:bg-rose-400/5 dark:text-rose-300 dark:hover:bg-rose-400/10"
+                              >
+                                <Trash2 className="mr-1.5 h-3.5 w-3.5" />
+                                Delete
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
             )}
 
             {!loading && !error && filteredTasks.length > 0 && (
-              <div className="border-t border-slate-200/70 px-6 py-3 text-xs text-slate-500 dark:border-white/10">
+              <div className="border-t border-slate-200/70 px-6 py-3 text-sm font-medium tracking-tight text-slate-600 dark:border-white/10 dark:text-slate-400">
                 Showing {filteredTasks.length} of {tasks.length} tasks
               </div>
             )}
@@ -791,6 +804,118 @@ export default function TasksPage() {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* View task details dialog */}
+      <Dialog
+        open={viewingTask !== null}
+        onOpenChange={(open) => {
+          if (!open) setViewingTask(null);
+        }}
+      >
+        <DialogContent
+          className={`overflow-hidden rounded-3xl border p-0 shadow-2xl backdrop-blur-2xl sm:max-w-[520px] ${
+            isDark
+              ? 'border-blue-400/25 bg-slate-950/95 text-slate-100 shadow-blue-950/40'
+              : 'border-blue-200/80 bg-white/95 text-slate-900 shadow-blue-900/10'
+          }`}
+        >
+          {viewingTask && (
+            <>
+              {/* Modal header */}
+              <div className="relative overflow-hidden border-b border-blue-500/15 px-6 pb-5 pt-6">
+                <div className="pointer-events-none absolute -right-10 -top-16 h-40 w-40 rounded-full bg-blue-500/15 blur-3xl" />
+                <div className="flex items-center justify-between relative">
+                  <div className="flex items-center gap-3">
+                    <span className="rounded-xl border border-blue-400/20 bg-blue-500/10 px-2.5 py-1 text-xs font-bold text-blue-500">
+                      #{viewingTask.id}
+                    </span>
+                    <Badge
+                      variant="outline"
+                      className={`rounded-full px-3 py-1 text-[11px] font-semibold ${statusStyles[viewingTask.status]}`}
+                    >
+                      {viewingTask.status.replace('_', ' ')}
+                    </Badge>
+                  </div>
+                </div>
+                <h2 className="text-xl font-bold mt-3">{viewingTask.title}</h2>
+              </div>
+
+              {/* Modal content body */}
+              <div className="space-y-5 px-6 py-6">
+                <div className="space-y-1.5">
+                  <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-400">Description</h4>
+                  <div className="rounded-2xl border border-slate-200/70 bg-slate-50/70 p-4 text-sm dark:border-white/10 dark:bg-white/5">
+                    {viewingTask.description ? (
+                      <p className="whitespace-pre-wrap leading-relaxed">{viewingTask.description}</p>
+                    ) : (
+                      <p className="text-slate-400 italic">No description provided for this task.</p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="rounded-2xl border border-slate-200/70 bg-slate-50/70 p-3.5 dark:border-white/10 dark:bg-white/5">
+                    <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 block mb-1">Due Date & Time</span>
+                    <div className="flex items-center gap-2 text-sm font-medium">
+                      <CalendarClock className="h-4 w-4 text-blue-500" />
+                      {formatDueDate(viewingTask.dueDate)}
+                    </div>
+                  </div>
+
+                  <div className="rounded-2xl border border-slate-200/70 bg-slate-50/70 p-3.5 dark:border-white/10 dark:bg-white/5">
+                    <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 block mb-1">Created At</span>
+                    <div className="flex items-center gap-2 text-sm font-medium">
+                      <Clock3 className="h-4 w-4 text-slate-400" />
+                      {formatDueDate(viewingTask.createdAt)}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Modal footer actions */}
+                <div className="flex justify-end gap-2 border-t border-slate-200/70 pt-4 dark:border-white/10">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      const taskToEdit = viewingTask;
+                      setViewingTask(null);
+                      openEditDialog(taskToEdit);
+                    }}
+                    className="rounded-xl border-slate-200 dark:border-white/10 dark:bg-white/5"
+                  >
+                    <Pencil className="mr-1.5 h-3.5 w-3.5" />
+                    Edit Task
+                  </Button>
+                  <Button
+                    type="button"
+                    onClick={() => setViewingTask(null)}
+                    className="rounded-xl bg-blue-600 px-5 text-white hover:bg-blue-700"
+                  >
+                    Close
+                  </Button>
+                </div>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
+}
+    {/* Wrap the TasksContent component in Suspense to show a loading state while it's being fetched */}
+    export default function TasksPage() {
+      return (
+        <Suspense
+          fallback={
+            <div className="flex min-h-screen items-center justify-center bg-[#080d19] text-white">
+              <div className="flex flex-col items-center gap-3">
+                <div className="h-8 w-8 animate-spin rounded-full border-2 border-blue-500/20 border-t-blue-600" />
+                <p className="text-sm text-slate-400">Loading Taskora...</p>
+              </div>
+            </div>
+          }
+        >
+          <TasksContent />
+        </Suspense>
+      );
 }

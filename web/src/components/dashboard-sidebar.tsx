@@ -1,45 +1,54 @@
 //web/src/components/dashboard-sidebar.tsx
 
-{/* Displays the Taskora dashboard sidebar and navigation menu. */}
+// Displays the Taskora dashboard sidebar and navigation menu.
+'use client';
 
-import Link from "next/link";
+import Link from 'next/link';
+import { usePathname, useSearchParams } from 'next/navigation';
 import {
   LayoutDashboard,
-  ListTodo,
   Clock3,
   CheckCircle2,
   Settings,
   CheckSquare,
-} from "lucide-react";
+} from 'lucide-react';
 
 // Defines the navigation links displayed in the sidebar.
 const navigationItems = [
   {
-    label: "Overview",
-    href: "/",
+    label: 'Overview',
+    href: '/',
     icon: LayoutDashboard,
+    key: 'overview',
   },
   {
-    label: "All Tasks",
-    href: "/tasks",
-    icon: ListTodo,
-  },
-  {
-    label: "In Progress",
-    href: "/tasks?status=IN_PROGRESS",
+    label: 'To Do',
+    href: '/?status=TODO',
     icon: Clock3,
+    key: 'TODO',
   },
   {
-    label: "Completed",
-    href: "/tasks?status=DONE",
+    label: 'In Progress',
+    href: '/?status=IN_PROGRESS',
+    icon: Clock3,
+    key: 'IN_PROGRESS',
+  },
+  {
+    label: 'Completed',
+    href: '/?status=DONE',
     icon: CheckCircle2,
+    key: 'DONE',
   },
 ];
 
 export default function DashboardSidebar() {
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const currentStatus = searchParams.get('status');
+
   return (
     <aside className="flex min-h-screen w-64 shrink-0 flex-col bg-[#111827] px-5 py-7 text-white">
-
+      
       {/* Displays the Taskora brand identity. */}
       <div className="mb-12 flex items-center gap-3 px-2">
         <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600 shadow-lg shadow-blue-600/20">
@@ -62,18 +71,25 @@ export default function DashboardSidebar() {
           Workspace
         </p>
 
-        {navigationItems.map((item, index) => {
+        {navigationItems.map((item) => {
           const Icon = item.icon;
-          const isActive = index === 0;
+          
+          // Determine active state strictly based on route and status parameter
+          let isActive = false;
+          if (item.key === 'overview') {
+            isActive = (pathname === '/' || pathname === '/tasks') && !currentStatus;
+          } else {
+            isActive = (pathname === '/' || pathname === '/tasks') && currentStatus === item.key;
+          }
 
           return (
             <Link
-              key={item.href}
+              key={item.label}
               href={item.href}
               className={`flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium transition-all duration-200 ${
                 isActive
-                  ? "bg-blue-600 text-white shadow-lg shadow-blue-600/20"
-                  : "text-slate-400 hover:bg-slate-800 hover:text-white"
+                  ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20'
+                  : 'text-slate-400 hover:bg-slate-800 hover:text-white'
               }`}
             >
               <Icon size={19} />

@@ -3,12 +3,7 @@
 // Validates incoming data when creating a new task.
 
 import {
-  IsDateString,
-  IsEnum,
-  IsNotEmpty,
-  IsOptional,
-  IsString,
-  MaxLength,
+  IsDateString, IsEnum, IsNotEmpty, IsOptional, IsString, MaxLength,
 } from 'class-validator';
 
 import { TaskStatus } from '../entities/task.entity.js';

@@ -1,3 +1,5 @@
+//api/src/app.controller.spec.ts
+
 import { Test, TestingModule } from '@nestjs/testing';
 import { AppController } from './app.controller.js';
 import { AppService } from './app.service.js';
@@ -16,7 +18,7 @@ describe('AppController', () => {
 
   describe('root', () => {
     it('should return "Hello World!"', () => {
-      expect(appController.getHello()).toBe('Hello World!');
+      expect(appController.getHello()).toBe('Hello World!'); // This test checks if the getHello method of the AppController returns the expected string "Hello World!".
     });
   });
 });
