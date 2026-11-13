@@ -3,10 +3,30 @@
 Taskora is a full-stack task management application built with a **NestJS** backend (Prisma ORM + SQLite) and a **Next.js 16** frontend (Tailwind CSS + Shadcn UI). It provides a responsive dashboard for organizing tasks, tracking due dates, filtering by status, and managing workflows.
 
 ---
-<sub>Author: GihanBandaraX | </sub>
-<sub> Date: 12th November 2026</sub>
+<sub>Author: GihanBandaraX · Published: November 12, 2026</sub>
+---
+## 📸 Application Screenshots
+
+### Dashboard
+<div align="center">
+  <img src="screenshots/main_window_light.jpeg" alt="Taskora Dashboard" width="70%" style="border: 1px solid #d1d5db; border-radius: 10px;" />
+</div>
+
 ---
 
+### Create New Task
+<div align="center">
+  <img src="screenshots/create_new_task_light.jpeg" alt="Create New Task" width="70%" style="border: 1px solid #d1d5db; border-radius: 10px;" />
+</div>
+
+---
+
+### View Task
+<div align="center">
+  <img src="screenshots/view_current_task_light.jpeg" alt="View Task" width="70%" style="border: 1px solid #d1d5db; border-radius: 10px;" />
+</div>
+
+---
 ## 🛠️ Technology Stack
 
 | Layer | Component | Technologies & Versions |
